@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Panel de administración</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;background:#f5f7fb;color:#1b2333;overflow-x:hidden}
+.wrap{max-width:900px;margin:0 auto;padding:16px}
+h1{font-size:1.4rem;margin:0}h2{margin:28px 0 12px;font-size:1.15rem}
+.top{position:sticky;top:0;background:#0f2a6b;color:#fff;z-index:5}
+.top .wrap{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:10px 16px;background:#1d4ed8;color:#fff;font-weight:600}
+button.s{background:#e8eefc;color:#1d4ed8}button.d{background:#fee2e2;color:#b91c1c}button.g{background:#16a34a}
+input,select,textarea{width:100%;font:inherit;padding:9px 12px;border:1px solid #d5dcec;border-radius:10px;background:#fff;min-width:0}
+textarea{resize:vertical;min-height:64px}
+label{display:block;font-size:.82rem;color:#64708a;font-weight:600;margin-bottom:3px}
+.box{background:#fff;border:1px solid #e3e8f2;border-radius:14px;padding:16px;margin-bottom:14px}
+.g2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.prod{display:grid;grid-template-columns:110px 1fr;gap:14px}
+.prod img{width:110px;height:84px;object-fit:cover;border-radius:10px;background:#e8eefc}
+@media(max-width:560px){.prod{grid-template-columns:1fr}.prod img{width:100%;height:150px}}
+.chk{display:flex;align-items:center;gap:8px;font-weight:600}.chk input{width:20px;height:20px}
+.fila{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:10px;align-items:end}
+.aviso{background:#fff7e0;border:1px solid #f1d98a;border-radius:12px;padding:12px;font-size:.92rem;margin-bottom:14px}
+#login{max-width:360px;margin:15vh auto;padding:0 16px}
+#app{display:none}
+</style>
+</head>
+<body>
+<div id="login" class="box"><h1>🔒 Panel de administración</h1><p>Escribe la contraseña:</p>
+<input id="pw" type="password" autocomplete="current-password"><p id="err" style="color:#b91c1c;margin:8px 0"></p><button id="go" style="width:100%">Entrar</button></div>
+
+<div id="app">
+  <div class="top"><div class="wrap"><h1>Panel de administración</h1><div><button class="g" id="dl">⬇ Descargar datos.js</button></div></div></div>
+  <div class="wrap">
+    <div class="aviso"><b>Cómo se guarda:</b> los cambios se guardan como borrador en este navegador. Para publicarlos, pulsa <b>Descargar datos.js</b> y reemplaza el archivo <code>datos.js</code> de tu sitio (las instrucciones están en la guía).</div>
+    <h2>Datos del negocio</h2><div class="box g2" id="neg"></div>
+    <h2>Horarios</h2><div class="box" id="hor"></div>
+    <h2>Categorías</h2><div class="box"><label>Una por línea</label><textarea id="cats"></textarea></div>
+    <h2>Productos <button class="s" id="addP" style="margin-left:8px">+ Agregar producto</button></h2><div id="prods"></div>
+  </div>
+</div>
+
+<script src="datos.js"></script>
+<script>
+// ⚠️ CAMBIA ESTA CONTRASEÑA. Es una barrera sencilla para evitar curiosos; no es seguridad real
+// (cualquiera con conocimientos técnicos puede leerla). Nunca uses aquí una clave que uses en otros sitios.
+var CLAVE = "CAP170052025";
+var D = JSON.parse(JSON.stringify(window.NEGOCIO||{}));
+var FB="data:image/svg+xml;utf8,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 84"><rect width="110" height="84" fill="#e8eefc"/></svg>');
+function $(i){return document.getElementById(i)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+
+function entrar(){
+  if($("pw").value!==CLAVE){$("err").textContent="Contraseña incorrecta.";return}
+  $("login").style.display="none";$("app").style.display="block";
+  try{var b=localStorage.getItem("borrador_datos");if(b&&confirm("Hay un borrador guardado en este navegador. ¿Quieres continuar con él?\n(Cancelar = empezar con el datos.js actual)"))D=JSON.parse(b)}catch(e){}
+  render();
+}
+$("go").onclick=entrar;$("pw").onkeydown=function(e){if(e.key==="Enter")entrar()};
+
+function setp(path,val){var p=path.split("."),o=D;for(var i=0;i<p.length-1;i++)o=o[p[i]];o[p[p.length-1]]=val}
+function guardar(){try{localStorage.setItem("borrador_datos",JSON.stringify(D))}catch(e){}}
+
+function render(){
+  var campos=[["nombre","Nombre del negocio"],["eslogan","Título principal (portada)"],["logo","Archivo del logo (ej. logo.png)"],["moneda","Símbolo de moneda"],["direccion","Dirección"],["referencia","Referencia"],["mapaUrl","Enlace del mapa (embed de Google Maps)"]];
+  $("neg").innerHTML=campos.map(function(c){return '<div><label>'+c[1]+'</label><input data-k="'+c[0]+'" value="'+esc(D[c[0]])+'"></div>'}).join("")+
+    '<div style="grid-column:1/-1"><label>Descripción de la portada</label><textarea data-k="descripcion">'+esc(D.descripcion)+'</textarea></div>';
+  $("hor").innerHTML=(D.horarios||[]).map(function(h,i){return '<div class="fila"><div><label>Día(s)</label><input data-k="horarios.'+i+'.dia" value="'+esc(h.dia)+'"></div><div><label>Hora</label><input data-k="horarios.'+i+'.hora" value="'+esc(h.hora)+'"></div><button class="d" data-del="h'+i+'">✕</button></div>'}).join("")+'<button class="s" id="addH">+ Agregar horario</button>';
+  $("cats").value=(D.categorias||[]).join("\n");
+  var opt=function(sel){return (D.categorias||[]).map(function(c){return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>'}).join("")};
+  $("prods").innerHTML=(D.productos||[]).map(function(p,i){var k="productos."+i+".";return '<div class="box prod"><img src="'+esc(p.imagen)+'" alt="" onerror="this.onerror=null;this.src=\''+FB.replace(/'/g,"%27")+'\'"><div class="g2">'+
+    '<div><label>Nombre</label><input data-k="'+k+'nombre" value="'+esc(p.nombre)+'"></div>'+
+    '<div><label>Categoría</label><select data-k="'+k+'categoria">'+opt(p.categoria)+'</select></div>'+
+    '<div><label>Precio (solo número)</label><input data-k="'+k+'precio" data-num="1" inputmode="decimal" value="'+esc(p.precio)+'"></div>'+
+    '<div><label>Foto (ej. img/laptop1.jpg)</label><input data-k="'+k+'imagen" value="'+esc(p.imagen)+'"></div>'+
+    '<div style="grid-column:1/-1"><label>Descripción corta</label><textarea data-k="'+k+'descripcion">'+esc(p.descripcion)+'</textarea></div>'+
+    '<label class="chk"><input type="checkbox" data-k="'+k+'disponible"'+(p.disponible!==false?' checked':'')+'> Disponible (desmarca = Agotado)</label>'+
+    '<div style="text-align:right"><button class="d" data-del="p'+i+'">Eliminar</button></div></div></div>'}).join("");
+}
+document.addEventListener("input",function(e){
+  var t=e.target,k=t.dataset&&t.dataset.k;
+  if(k){var v=t.type==="checkbox"?t.checked:(t.dataset.num&&t.value.trim()!==""&&!isNaN(Number(t.value))?Number(t.value):t.value);
+    setp(k,v);guardar();
+    if(/imagen$/.test(k)){var im=t.closest(".prod").querySelector("img");im.src=t.value}}
+  if(t.id==="cats"){D.categorias=t.value.split("\n").map(function(s){return s.trim()}).filter(Boolean);guardar()}
+});
+$("cats").addEventListener("change",render);
+document.addEventListener("click",function(e){
+  var t=e.target;
+  if(t.id==="addH"){D.horarios.push({dia:"",hora:""});guardar();render()}
+  if(t.id==="addP"){D.productos.unshift({id:Date.now(),nombre:"Nuevo producto",categoria:(D.categorias||[""])[0],descripcion:"",precio:0,imagen:"img/nuevo.jpg",disponible:true});guardar();render();window.scrollTo(0,$("prods").offsetTop-80)}
+  var d=t.dataset&&t.dataset.del;
+  if(d){var i=Number(d.slice(1));if(!confirm("¿Eliminar este elemento?"))return;(d[0]==="h"?D.horarios:D.productos).splice(i,1);guardar();render()}
+  if(t.id==="dl"){
+    var b=new Blob(["/* Generado con admin.html */\nwindow.NEGOCIO = "+JSON.stringify(D,null,2)+";\n"],{type:"text/javascript"});
+    var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="datos.js";document.body.appendChild(a);a.click();a.remove();
+  }
+});
+</script>
+</body>
+</html>
